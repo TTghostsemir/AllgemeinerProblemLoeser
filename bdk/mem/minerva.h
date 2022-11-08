@@ -27,8 +27,8 @@
 
 typedef struct
 {
-	s32 rate_to;
-	s32 rate_from;
+	u32 rate_to;
+	u32 rate_from;
 	emc_table_t *mtc_table;
 	u32 table_entries;
 	emc_table_t *current_emc_table;
@@ -60,6 +60,7 @@ typedef enum
 extern void (*minerva_cfg)(mtc_config_t *mtc_cfg, void *);
 u32  minerva_init();
 void minerva_change_freq(minerva_freq_t freq);
+void minerva_prep_boot_freq();
 void minerva_periodic_training();
 
 #endif

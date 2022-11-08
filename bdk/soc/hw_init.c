@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018 naehrwert
- * Copyright (c) 2018-2020 CTCaer
+ * Copyright (c) 2018-2021 CTCaer
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -42,10 +42,22 @@
 #include <storage/nx_sd.h>
 #include <storage/sdmmc.h>
 #include <thermal/fan.h>
+#include <thermal/tmp451.h>
 #include <utils/util.h>
 
 extern boot_cfg_t b_cfg;
 extern volatile nyx_storage_t *nyx_str;
+
+u32 hw_rst_status;
+u32 hw_rst_reason;
+
+u32 hw_get_chip_id()
+{
+	if (((APB_MISC(APB_MISC_GP_HIDREV) >> 4) & 0xF) >= GP_HIDREV_MAJOR_T210B01)
+		return GP_HIDREV_MAJOR_T210B01;
+	else
+		return GP_HIDREV_MAJOR_T210;
+}
 
 /*
  * CLK_OSC - 38.4 MHz crystal.
@@ -55,14 +67,6 @@ extern volatile nyx_storage_t *nyx_str;
  * HCLK    - 204MHz init (-> 408MHz -> OC).
  * PCLK    - 68MHz  init (-> 136MHz -> OC/4).
  */
-
-u32 hw_get_chip_id()
-{
-	if (((APB_MISC(APB_MISC_GP_HIDREV) >> 4) & 0xF) >= GP_HIDREV_MAJOR_T210B01)
-		return GP_HIDREV_MAJOR_T210B01;
-	else
-		return GP_HIDREV_MAJOR_T210;
-}
 
 static void _config_oscillators()
 {
@@ -87,6 +91,7 @@ static void _config_oscillators()
 	CLOCK(CLK_RST_CONTROLLER_CLK_SYSTEM_RATE) = 2;             // Set HCLK div to 1 and PCLK div to 3.
 }
 
+// The uart is skipped for Copper, Hoag and Calcio. Used in Icosa, Iowa and Aula.
 static void _config_gpios(bool nx_hoag)
 {
 	// Clamp inputs when tristated.
@@ -248,36 +253,25 @@ static void _mbist_workaround()
 
 static void _config_se_brom()
 {
-	// Enable fuse clock.
+	// Enable Fuse visibility.
 	clock_enable_fuse(true);
 
-	// Skip SBK/SSK if sept was run.
-	bool sbk_skip = b_cfg.boot_cfg & BOOT_CFG_SEPT_RUN || FUSE(FUSE_PRIVATE_KEY0) == 0xFFFFFFFF;
-	if (!sbk_skip)
-	{
-		// Bootrom part we skipped.
-		u32 sbk[4] = {
-			FUSE(FUSE_PRIVATE_KEY0),
-			FUSE(FUSE_PRIVATE_KEY1),
-			FUSE(FUSE_PRIVATE_KEY2),
-			FUSE(FUSE_PRIVATE_KEY3)
-		};
-		// Set SBK to slot 14.
-		se_aes_key_set(14, sbk, 0x10);
+	// Try to set SBK from fuses. If patched, skip.
+	fuse_set_sbk();
 
-		// Lock SBK from being read.
-		se_key_acc_ctrl(14, SE_KEY_TBL_DIS_KEYREAD_FLAG);
-
-		// Lock SSK (although it's not set and unused anyways).
-		se_key_acc_ctrl(15, SE_KEY_TBL_DIS_KEYREAD_FLAG);
-	}
+	// Lock SSK (although it's not set and unused anyways).
+	// se_key_acc_ctrl(15, SE_KEY_TBL_DIS_KEYREAD_FLAG);
 
 	// This memset needs to happen here, else TZRAM will behave weirdly later on.
-	memset((void *)TZRAM_BASE, 0, 0x10000);
+	memset((void *)TZRAM_BASE, 0, SZ_64K);
 	PMC(APBDEV_PMC_CRYPTO_OP) = PMC_CRYPTO_OP_SE_ENABLE;
-	SE(SE_INT_STATUS_REG_OFFSET) = 0x1F;
+	SE(SE_INT_STATUS_REG) = 0x1F; // Clear all SE interrupts.
 
-	// Clear the boot reason to avoid problems later
+	// Save reset reason.
+	hw_rst_status = PMC(APBDEV_PMC_SCRATCH200);
+	hw_rst_reason = PMC(APBDEV_PMC_RST_STATUS) & PMC_RST_STATUS_MASK;
+
+	// Clear the boot reason to avoid problems later.
 	PMC(APBDEV_PMC_SCRATCH200) = 0x0;
 	PMC(APBDEV_PMC_RST_STATUS) = 0x0;
 	APB_MISC(APB_MISC_PP_STRAPPING_OPT_A) = (APB_MISC(APB_MISC_PP_STRAPPING_OPT_A) & 0xF0) | (7 << 10);
@@ -350,7 +344,7 @@ void hw_init()
 	// Enable Security Engine clock.
 	clock_enable_se();
 
-	// Enable Fuse clock.
+	// Enable Fuse visibility.
 	clock_enable_fuse(true);
 
 	// Disable Fuse programming.
@@ -419,19 +413,18 @@ void hw_init()
 	bpmp_mmu_enable();
 }
 
-void hw_reinit_workaround(bool coreboot, u32 magic)
+void hw_reinit_workaround(bool coreboot, u32 bl_magic)
 {
 	// Disable BPMP max clock.
 	bpmp_clk_rate_set(BPMP_CLK_NORMAL);
 
 #ifdef NYX
-	// Deinit touchscreen, 5V regulators and Joy-Con.
-	touch_power_off();
+	// Disable temperature sensor, touchscreen, 5V regulators and Joy-Con.
+	tmp451_end();
 	set_fan_duty(0);
+	touch_power_off();
 	jc_deinit();
 	regulator_5v_disable(REGULATOR_5V_ALL);
-	clock_disable_uart(UART_B);
-	clock_disable_uart(UART_C);
 #endif
 
 	// Flush/disable MMU cache and set DRAM clock to 204MHz.
@@ -460,11 +453,22 @@ void hw_reinit_workaround(bool coreboot, u32 magic)
 		PMC(APBDEV_PMC_NO_IOPOWER) &= ~(PMC_NO_IOPOWER_SDMMC1_IO_EN);
 	}
 
-	// Power off display.
-	display_end();
+	// Seamless display or display power off.
+	switch (bl_magic)
+	{
+	case BL_MAGIC_CRBOOT_SLD:;
+		// Set pwm to 0%, switch to gpio mode and restore pwm duty.
+		u32 brightness = display_get_backlight_brightness();
+		display_backlight_brightness(0, 1000);
+		gpio_config(GPIO_PORT_V, GPIO_PIN_0, GPIO_MODE_GPIO);
+		display_backlight_brightness(brightness, 0);
+		break;
+	default:
+		display_end();
+	}
 
 	// Enable clock to USBD and init SDMMC1 to avoid hangs with bad hw inits.
-	if (magic == 0xBAADF00D)
+	if (bl_magic == BL_MAGIC_BROKEN_HWI)
 	{
 		CLOCK(CLK_RST_CONTROLLER_CLK_ENB_L_SET) = BIT(CLK_L_USBD);
 		sdmmc_init(&sd_sdmmc, SDMMC_1, SDMMC_POWER_3_3, SDMMC_BUS_WIDTH_1, SDHCI_TIMING_SD_ID, 0);

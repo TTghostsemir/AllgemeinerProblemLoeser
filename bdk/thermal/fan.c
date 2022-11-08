@@ -1,7 +1,7 @@
 /*
  * Fan driver for Nintendo Switch
  *
- * Copyright (c) 2018-2020 CTCaer
+ * Copyright (c) 2018-2021 CTCaer
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,7 @@
 
 #include <thermal/fan.h>
 #include <power/regulator_5v.h>
+#include <soc/fuse.h>
 #include <soc/gpio.h>
 #include <soc/pinmux.h>
 #include <soc/t210.h>
@@ -26,9 +27,20 @@
 void set_fan_duty(u32 duty)
 {
 	static bool fan_init = false;
-	static u16 curr_duty = -1;
+	static u16  curr_duty = -1;
+
+	if (duty > 236)
+		duty = 236;
 
 	if (curr_duty == duty)
+		return;
+
+	curr_duty = duty;
+
+	//! TODO: Add HOAG/AULA support.
+	u32 hw_type = fuse_read_hw_type();
+	if (hw_type != FUSE_NX_HW_TYPE_ICOSA &&
+		hw_type != FUSE_NX_HW_TYPE_IOWA)
 		return;
 
 	if (!fan_init)
@@ -45,9 +57,6 @@ void set_fan_duty(u32 duty)
 
 		fan_init = true;
 	}
-
-	if (duty > 236)
-		duty = 236;
 
 	// Inverted polarity.
 	u32 inv_duty = 236 - duty;
@@ -71,23 +80,20 @@ void set_fan_duty(u32 duty)
 		// Enable fan.
 		PINMUX_AUX(PINMUX_AUX_LCD_GPIO2) = 1; // Set source to PWM1.
 	}
-
-	curr_duty = duty;
 }
 
 void get_fan_speed(u32 *duty, u32 *rpm)
 {
 	if (rpm)
 	{
-		u32  irq_count = 1;
+		u32  irq_count = 0;
 		bool should_read = true;
-		bool irq_val = 0;
 
-		// Poll irqs for 2 seconds.
-		int timer = get_tmr_us() + 1000000;
-		while (timer - get_tmr_us())
+		// Poll irqs for 2 seconds. (5 seconds for accurate count).
+		int  timer = get_tmr_us() + 2000000;
+		while ((timer - get_tmr_us()) > 0)
 		{
-			irq_val = gpio_read(GPIO_PORT_S, GPIO_PIN_7);
+			bool irq_val = gpio_read(GPIO_PORT_S, GPIO_PIN_7);
 			if (irq_val && should_read)
 			{
 				irq_count++;
@@ -97,8 +103,11 @@ void get_fan_speed(u32 *duty, u32 *rpm)
 				should_read = true;
 		}
 
+		// Halve the irq count.
+		irq_count /= 2;
+
 		// Calculate rpm based on triggered interrupts.
-		*rpm = 60000000 / ((1000000 * 2) / irq_count);
+		*rpm = irq_count * (60 / 2);
 	}
 
 	if (duty)

@@ -204,7 +204,7 @@ static bool _derive_tsec_keys(tsec_ctxt_t *tsec_ctxt, u32 kb, key_derivation_ctx
         }
     }
 
-    mc_enable_ahb_redirect();
+    mc_enable_ahb_redirect(true);
 
     if (res < 0) {
         //EPRINTFARGS("ERROR %x dumping TSEC.\n", res);

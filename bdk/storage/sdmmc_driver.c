@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018 naehrwert
- * Copyright (c) 2018-2020 CTCaer
+ * Copyright (c) 2018-2021 CTCaer
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -934,12 +934,20 @@ static int _sdmmc_config_dma(sdmmc_t *sdmmc, u32 *blkcnt_out, sdmmc_req_t *req)
 		*blkcnt_out = blkcnt;
 
 	u32 trnmode = SDHCI_TRNS_DMA;
+
+	// Set mulitblock request.
 	if (req->is_multi_block)
 		trnmode = SDHCI_TRNS_MULTI | SDHCI_TRNS_BLK_CNT_EN | SDHCI_TRNS_DMA;
+
+	// Set request direction.
 	if (!req->is_write)
 		trnmode |= SDHCI_TRNS_READ;
-	if (req->is_auto_cmd12)
-		trnmode = (trnmode & ~(SDHCI_TRNS_AUTO_CMD12 | SDHCI_TRNS_AUTO_CMD23)) | SDHCI_TRNS_AUTO_CMD12;
+
+	// Automatic send of stop transmission or set block count cmd.
+	if (req->is_auto_stop_trn)
+		trnmode |= SDHCI_TRNS_AUTO_CMD12;
+	//else if (req->is_auto_set_blkcnt)
+	//	trnmode |= SDHCI_TRNS_AUTO_CMD23;
 
 	sdmmc->regs->trnmod = trnmode;
 
@@ -1025,12 +1033,10 @@ static int _sdmmc_execute_cmd_inner(sdmmc_t *sdmmc, sdmmc_cmd_t *cmd, sdmmc_req_
 	}
 
 	int result = _sdmmc_wait_response(sdmmc);
-	if (!result)
-	{
 #ifdef ERROR_EXTRA_PRINTING
+	if (!result)
 		EPRINTF("SDMMC: Transfer timeout!");
 #endif
-	}
 DPRINTF("rsp(%d): %08X, %08X, %08X, %08X\n", result,
 		sdmmc->regs->rspreg0, sdmmc->regs->rspreg1, sdmmc->regs->rspreg2, sdmmc->regs->rspreg3);
 	if (result)
@@ -1039,22 +1045,18 @@ DPRINTF("rsp(%d): %08X, %08X, %08X, %08X\n", result,
 		{
 			sdmmc->expected_rsp_type = cmd->rsp_type;
 			result = _sdmmc_cache_rsp(sdmmc, sdmmc->rsp, 0x10, cmd->rsp_type);
-			if (!result)
-			{
 #ifdef ERROR_EXTRA_PRINTING
+			if (!result)
 				EPRINTF("SDMMC: Unknown response type!");
 #endif
-			}
 		}
 		if (req && result)
 		{
 			result = _sdmmc_update_dma(sdmmc);
-			if (!result)
-			{
 #ifdef ERROR_EXTRA_PRINTING
+			if (!result)
 				EPRINTF("SDMMC: DMA Update failed!");
 #endif
-			}
 		}
 	}
 
@@ -1070,19 +1072,17 @@ DPRINTF("rsp(%d): %08X, %08X, %08X, %08X\n", result,
 			if (blkcnt_out)
 				*blkcnt_out = blkcnt;
 
-			if (req->is_auto_cmd12)
+			if (req->is_auto_stop_trn)
 				sdmmc->rsp3 = sdmmc->regs->rspreg3;
 		}
 
 		if (cmd->check_busy || req)
 		{
 			result = _sdmmc_wait_card_busy(sdmmc);
-			if (!result)
-			{
 #ifdef ERROR_EXTRA_PRINTING
+			if (!result)
 				EPRINTF("SDMMC: Busy timeout!");
 #endif
-			}
 			return result;
 		}
 	}
@@ -1371,12 +1371,12 @@ void sdmmc_end(sdmmc_t *sdmmc)
 		_sdmmc_sd_clock_disable(sdmmc);
 		// Disable SDMMC power.
 		_sdmmc_set_io_power(sdmmc, SDMMC_POWER_OFF);
+		_sdmmc_commit_changes(sdmmc);
 
 		// Disable SD card power.
 		if (sdmmc->id == SDMMC_1)
 			sdmmc1_disable_power();
 
-		_sdmmc_commit_changes(sdmmc);
 		clock_sdmmc_disable(sdmmc->id);
 		sdmmc->clock_stopped = 1;
 	}
