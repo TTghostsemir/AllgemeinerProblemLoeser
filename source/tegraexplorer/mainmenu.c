@@ -6,7 +6,7 @@
 #include "../hid/hid.h"
 #include "../fs/menus/explorer.h"
 #include <utils/btn.h>
-#include <storage/nx_sd.h>
+#include <storage/sd.h>
 #include "tconf.h"
 #include "../keys/keys.h"
 #include "../storage/mountmanager.h"
@@ -99,7 +99,6 @@ void HandleSD(){
 }
 
 
-extern bool sd_mounted;
 extern bool is_sd_inited;
 extern int launch_payload(char *path);
 
@@ -113,7 +112,7 @@ void RebootToHekate(){
 
 void MountOrUnmountSD(){
     gfx_clearscreen();
-    if (sd_mounted)
+    if (sd_get_card_mounted())
         sd_unmount();
     else if (!sd_mount())
         hidWait();
@@ -152,8 +151,8 @@ void EnterMainMenu(){
             sd_unmount();
 
         // // -- Exit --
-        mainMenuEntries[MainRebootAMS].hide = (!sd_mounted || !FileExists("sd:/atmosphere/reboot_payload.bin"));
-        mainMenuEntries[MainRebootHekate].hide = (!sd_mounted || !FileExists("sd:/bootloader/update.bin"));
+        mainMenuEntries[MainRebootAMS].hide = (!sd_get_card_mounted() || !FileExists("sd:/atmosphere/reboot_payload.bin"));
+        mainMenuEntries[MainRebootHekate].hide = (!sd_get_card_mounted() || !FileExists("sd:/bootloader/update.bin"));
         mainMenuEntries[MainRebootRCM].hide = h_cfg.t210b01;
 
         gfx_clearscreen();

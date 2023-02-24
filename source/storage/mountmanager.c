@@ -1,11 +1,11 @@
 #include "mountmanager.h"
 #include "emummc.h"
 #include "../tegraexplorer/tconf.h"
-#include "nx_emmc.h"
+#include <storage/emmc.h>
 #include "../keys/keys.h"
 #include <sec/se.h>
 #include <libs/fatfs/ff.h>
-#include "nx_emmc_bis.h"
+#include <storage/nx_emmc_bis.h>
 #include "../config.h"
 
 extern hekate_config h_cfg;
@@ -73,7 +73,7 @@ ErrCode_t mountMMCPart(const char *partition){
     if (!system_part)
         return newErrCode(TE_ERR_PARTITION_NOT_FOUND);
         
-    nx_emmc_bis_init(system_part);
+    nx_emmc_bis_init(system_part, false, 0);
 
     int res = 0;
     if ((res = f_mount(&emmc_fs, "bis:", 1)))

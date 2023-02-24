@@ -20,20 +20,23 @@
 
 #include "tsec.h"
 #include "tsec_t210.h"
+#include <memory_map.h>
+#include <mem/heap.h>
+#include <mem/mc.h>
+#include <mem/smmu.h>
 #include <sec/se_t210.h>
 #include <soc/bpmp.h>
 #include <soc/clock.h>
 #include <soc/kfuse.h>
+#include <soc/pmc.h>
 #include <soc/t210.h>
-#include <mem/heap.h>
-#include <mem/mc.h>
-#include <mem/smmu.h>
-#include <utils/util.h>
+#include <soc/timer.h>
 
 // #include <gfx_utils.h>
 
 #define PKG11_MAGIC 0x31314B50
-#define KB_TSEC_FW_EMU_COMPAT 6 // KB ID for HOS 6.2.0.
+
+#define TSEC_HOS_KB_620 6
 
 static int _tsec_dma_wait_idle()
 {
@@ -55,17 +58,18 @@ static int _tsec_dma_pa_to_internal_100(int not_imem, int i_offset, int pa_offse
 	else
 		cmd = TSEC_DMATRFCMD_IMEM;      // DMA IMEM (Instruction memmory)
 
-	TSEC(TSEC_DMATRFMOFFS) = i_offset;
+	TSEC(TSEC_DMATRFMOFFS)  = i_offset;
 	TSEC(TSEC_DMATRFFBOFFS) = pa_offset;
-	TSEC(TSEC_DMATRFCMD) = cmd;
+	TSEC(TSEC_DMATRFCMD)    = cmd;
 
 	return _tsec_dma_wait_idle();
 }
 
-int tsec_query(u8 *tsec_keys, u8 kb, tsec_ctxt_t *tsec_ctxt)
+int tsec_query(void *tsec_keys, tsec_ctxt_t *tsec_ctxt)
 {
 	int res = 0;
 	u8 *fwbuf = NULL;
+	u32 type = tsec_ctxt->type;
 	u32 *pdir, *car, *fuse, *pmc, *flowctrl, *se, *mc, *iram, *evec;
 	u32 *pkg11_magic_off;
 
@@ -73,30 +77,42 @@ int tsec_query(u8 *tsec_keys, u8 kb, tsec_ctxt_t *tsec_ctxt)
 	bpmp_freq_t prev_fid = bpmp_clk_rate_set(BPMP_CLK_NORMAL);
 
 	// Enable clocks.
-	clock_enable_host1x();
-	usleep(2);
 	clock_enable_tsec();
 	clock_enable_sor_safe();
 	clock_enable_sor0();
 	clock_enable_sor1();
 	clock_enable_kfuse();
-
 	kfuse_wait_ready();
 
-	//Configure Falcon.
+	// Disable AHB aperture.
+	mc_disable_ahb_redirect();
+
+	if (type == TSEC_FW_TYPE_NEW)
+	{
+		// Disable all CCPLEX core rails.
+		pmc_enable_partition(POWER_RAIL_CE0, DISABLE);
+		pmc_enable_partition(POWER_RAIL_CE1, DISABLE);
+		pmc_enable_partition(POWER_RAIL_CE2, DISABLE);
+		pmc_enable_partition(POWER_RAIL_CE3, DISABLE);
+
+		// Enable AHB aperture and set it to full mmio.
+		mc_enable_ahb_redirect();
+	}
+
+	// Configure Falcon.
 	TSEC(TSEC_DMACTL) = 0;
 	TSEC(TSEC_IRQMSET) =
 		TSEC_IRQMSET_EXT(0xFF) |
-		TSEC_IRQMSET_WDTMR |
-		TSEC_IRQMSET_HALT |
-		TSEC_IRQMSET_EXTERR |
-		TSEC_IRQMSET_SWGEN0 |
+		TSEC_IRQMSET_WDTMR     |
+		TSEC_IRQMSET_HALT      |
+		TSEC_IRQMSET_EXTERR    |
+		TSEC_IRQMSET_SWGEN0    |
 		TSEC_IRQMSET_SWGEN1;
 	TSEC(TSEC_IRQDEST) =
 		TSEC_IRQDEST_EXT(0xFF) |
-		TSEC_IRQDEST_HALT |
-		TSEC_IRQDEST_EXTERR |
-		TSEC_IRQDEST_SWGEN0 |
+		TSEC_IRQDEST_HALT      |
+		TSEC_IRQDEST_EXTERR    |
+		TSEC_IRQDEST_SWGEN0    |
 		TSEC_IRQDEST_SWGEN1;
 	TSEC(TSEC_ITFEN) = TSEC_ITFEN_CTXEN | TSEC_ITFEN_MTHDEN;
 	if (!_tsec_dma_wait_idle())
@@ -105,14 +121,15 @@ int tsec_query(u8 *tsec_keys, u8 kb, tsec_ctxt_t *tsec_ctxt)
 		goto out;
 	}
 
-	//Load firmware or emulate memio environment for newer TSEC fw.
-	if (kb == KB_TSEC_FW_EMU_COMPAT)
+	// Load firmware or emulate memio environment for newer TSEC fw.
+	if (type == TSEC_FW_TYPE_EMU)
 		TSEC(TSEC_DMATRFBASE) = (u32)tsec_ctxt->fw >> 8;
 	else
 	{
-		fwbuf = (u8 *)malloc(0x4000);
+		fwbuf = (u8 *)malloc(SZ_16K);
 		u8 *fwbuf_aligned = (u8 *)ALIGN((u32)fwbuf, 0x100);
 		memcpy(fwbuf_aligned, tsec_ctxt->fw, tsec_ctxt->size);
+
 		TSEC(TSEC_DMATRFBASE) = (u32)fwbuf_aligned >> 8;
 	}
 
@@ -125,27 +142,27 @@ int tsec_query(u8 *tsec_keys, u8 kb, tsec_ctxt_t *tsec_ctxt)
 		}
 	}
 
-	if (kb == KB_TSEC_FW_EMU_COMPAT)
+	if (type == TSEC_FW_TYPE_EMU)
 	{
 		// Init SMMU translation for TSEC.
 		pdir = smmu_init_for_tsec();
-		smmu_init(0x4002B000);
+		smmu_init(tsec_ctxt->secmon_base);
 		// Enable SMMU
 		if (!smmu_is_used())
 			smmu_enable();
 
 		// Clock reset controller.
 		car = page_alloc(1);
-		memcpy(car, (void *)CLOCK_BASE, 0x1000);
+		memcpy(car, (void *)CLOCK_BASE, SZ_PAGE);
 		car[CLK_RST_CONTROLLER_CLK_SOURCE_TSEC / 4] = 2;
 		smmu_map(pdir, CLOCK_BASE, (u32)car, 1, _WRITABLE | _READABLE | _NONSECURE);
 
 		// Fuse driver.
 		fuse = page_alloc(1);
-		memcpy((void *)&fuse[0x800/4], (void *)FUSE_BASE, 0x400);
+		memcpy((void *)&fuse[0x800/4], (void *)FUSE_BASE, SZ_1K);
 		fuse[0x82C / 4] = 0;
-		fuse[0x9E0 / 4] = (1 << (kb + 2)) - 1;
-		fuse[0x9E4 / 4] = (1 << (kb + 2)) - 1;
+		fuse[0x9E0 / 4] = (1 << (TSEC_HOS_KB_620 + 2)) - 1;
+		fuse[0x9E4 / 4] = (1 << (TSEC_HOS_KB_620 + 2)) - 1;
 		smmu_map(pdir, (FUSE_BASE - 0x800), (u32)fuse, 1, _READABLE | _NONSECURE);
 
 		// Power management controller.
@@ -158,21 +175,21 @@ int tsec_query(u8 *tsec_keys, u8 kb, tsec_ctxt_t *tsec_ctxt)
 
 		// Security engine.
 		se = page_alloc(1);
-		memcpy(se, (void *)SE_BASE, 0x1000);
+		memcpy(se, (void *)SE_BASE, SZ_PAGE);
 		smmu_map(pdir, SE_BASE, (u32)se, 1, _READABLE | _WRITABLE | _NONSECURE);
 
 		// Memory controller.
 		mc = page_alloc(1);
-		memcpy(mc, (void *)MC_BASE, 0x1000);
+		memcpy(mc, (void *)MC_BASE, SZ_PAGE);
 		mc[MC_IRAM_BOM / 4] = 0;
-		mc[MC_IRAM_TOM / 4] = 0x80000000;
+		mc[MC_IRAM_TOM / 4] = DRAM_START;
 		smmu_map(pdir, MC_BASE, (u32)mc, 1, _READABLE | _NONSECURE);
 
 		// IRAM
 		iram = page_alloc(0x30);
 		memcpy(iram, tsec_ctxt->pkg1, 0x30000);
 		// PKG1.1 magic offset.
-		pkg11_magic_off = (u32 *)(iram + (0x7000 / 4));
+		pkg11_magic_off = (u32 *)(iram + ((tsec_ctxt->pkg11_off + 0x20) / 4));
 		smmu_map(pdir, 0x40010000, (u32)iram, 0x30, _READABLE | _WRITABLE | _NONSECURE);
 
 		// Exception vectors
@@ -180,17 +197,17 @@ int tsec_query(u8 *tsec_keys, u8 kb, tsec_ctxt_t *tsec_ctxt)
 		smmu_map(pdir, EXCP_VEC_BASE, (u32)evec, 1, _READABLE | _WRITABLE | _NONSECURE);
 	}
 
-	//Execute firmware.
+	// Execute firmware.
 	HOST1X(HOST1X_CH0_SYNC_SYNCPT_160) = 0x34C2E1DA;
-	TSEC(TSEC_STATUS) = 0;
+	TSEC(TSEC_STATUS)     = 0;
 	TSEC(TSEC_BOOTKEYVER) = 1; // HOS uses key version 1.
-	TSEC(TSEC_BOOTVEC) = 0;
-	TSEC(TSEC_CPUCTL) = TSEC_CPUCTL_STARTCPU;
+	TSEC(TSEC_BOOTVEC)    = 0;
+	TSEC(TSEC_CPUCTL)     = TSEC_CPUCTL_STARTCPU;
 
-	if (kb == KB_TSEC_FW_EMU_COMPAT)
+	if (type == TSEC_FW_TYPE_EMU)
 	{
-		u32 start = get_tmr_us();
 		u32 k = se[SE_CRYPTO_KEYTABLE_DATA_REG / 4];
+		u32 timeout = get_tmr_us() + 125000;
 		u32 key[16] = {0};
 		u32 kidx = 0;
 
@@ -205,7 +222,7 @@ int tsec_query(u8 *tsec_keys, u8 kb, tsec_ctxt_t *tsec_ctxt)
 			}
 
 			// Failsafe.
-			if ((u32)get_tmr_us() - start > 125000)
+			if ((u32)get_tmr_us() > timeout)
 				break;
 		}
 
@@ -257,27 +274,26 @@ int tsec_query(u8 *tsec_keys, u8 kb, tsec_ctxt_t *tsec_ctxt)
 			goto out_free;
 		}
 
-		//Fetch result.
+		// Fetch result.
 		HOST1X(HOST1X_CH0_SYNC_SYNCPT_160) = 0;
 		u32 buf[4];
 		buf[0] = SOR1(SOR_NV_PDISP_SOR_DP_HDCP_BKSV_LSB);
 		buf[1] = SOR1(SOR_NV_PDISP_SOR_TMDS_HDCP_BKSV_LSB);
 		buf[2] = SOR1(SOR_NV_PDISP_SOR_TMDS_HDCP_CN_MSB);
 		buf[3] = SOR1(SOR_NV_PDISP_SOR_TMDS_HDCP_CN_LSB);
-		SOR1(SOR_NV_PDISP_SOR_DP_HDCP_BKSV_LSB) = 0;
+		SOR1(SOR_NV_PDISP_SOR_DP_HDCP_BKSV_LSB)   = 0;
 		SOR1(SOR_NV_PDISP_SOR_TMDS_HDCP_BKSV_LSB) = 0;
-		SOR1(SOR_NV_PDISP_SOR_TMDS_HDCP_CN_MSB) = 0;
-		SOR1(SOR_NV_PDISP_SOR_TMDS_HDCP_CN_LSB) = 0;
+		SOR1(SOR_NV_PDISP_SOR_TMDS_HDCP_CN_MSB)   = 0;
+		SOR1(SOR_NV_PDISP_SOR_TMDS_HDCP_CN_LSB)   = 0;
 
 		memcpy(tsec_keys, &buf, SE_KEY_128_SIZE);
 	}
 
-out_free:;
+out_free:
 	free(fwbuf);
 
-out:;
-
-	//Disable clocks.
+out:
+	// Disable clocks.
 	clock_disable_kfuse();
 	clock_disable_sor1();
 	clock_disable_sor0();
@@ -285,6 +301,11 @@ out:;
 	clock_disable_tsec();
 	bpmp_mmu_enable();
 	bpmp_clk_rate_set(prev_fid);
+
+#ifdef BDK_MC_ENABLE_AHB_REDIRECT
+	// Re-enable AHB aperture.
+	mc_enable_ahb_redirect();
+#endif
 
 	return res;
 }

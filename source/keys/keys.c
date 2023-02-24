@@ -18,9 +18,9 @@
 #include <mem/smmu.h>
 #include <soc/t210.h>
 #include "../storage/emummc.h"
-#include "../storage/nx_emmc.h"
-#include "../storage/nx_emmc_bis.h"
-#include <storage/nx_sd.h>
+#include <storage/emmc.h>
+#include <storage/nx_emmc_bis.h>
+#include <storage/sd.h>
 #include <storage/sdmmc.h>
 #include <utils/btn.h>
 #include <utils/list.h>
@@ -125,7 +125,7 @@ static void _derive_bis_keys(key_derivation_ctx_t *keys) {
 }
 
 static int _derive_master_keys_from_keyblobs(key_derivation_ctx_t *keys) {
-    u8 *keyblob_block = (u8 *)calloc(KB_FIRMWARE_VERSION_600 + 1, NX_EMMC_BLOCKSIZE);
+    u8 *keyblob_block = (u8 *)calloc(KB_FIRMWARE_VERSION_600 + 1, EMMC_BLOCKSIZE);
     encrypted_keyblob_t *current_keyblob = (encrypted_keyblob_t *)keyblob_block;
     u32 keyblob_mac[AES_128_KEY_SIZE / 4] = {0};
 
@@ -144,7 +144,7 @@ static int _derive_master_keys_from_keyblobs(key_derivation_ctx_t *keys) {
     se_aes_key_set(8, keys->tsec_keys, sizeof(keys->tsec_keys) / 2);
     se_aes_key_set(9, keys->sbk, 0x10);
 
-    if (!emummc_storage_read(&emmc_storage, KEYBLOB_OFFSET / NX_EMMC_BLOCKSIZE, KB_FIRMWARE_VERSION_600 + 1, keyblob_block)) {
+    if (!emummc_storage_read(&emmc_storage, KEYBLOB_OFFSET / EMMC_BLOCKSIZE, KB_FIRMWARE_VERSION_600 + 1, keyblob_block)) {
         DPRINTF("Unable to read keyblobs.");
     }
 
@@ -195,7 +195,7 @@ static bool _derive_tsec_keys(tsec_ctxt_t *tsec_ctxt, u32 kb, key_derivation_ctx
 
     mc_disable_ahb_redirect();
 
-    while (tsec_query(keys->tsec_keys, kb, tsec_ctxt) < 0) {
+    while (tsec_query(keys->tsec_keys, tsec_ctxt) < 0) {
         memset(keys->tsec_keys, 0, sizeof(keys->tsec_keys));
         retries++;
         if (retries > 15) {
@@ -231,7 +231,7 @@ static ALWAYS_INLINE u8 *_read_pkg1(const pkg1_id_t **pkg1_id) {
         DPRINTF("Unable to set partition.");
         return NULL;
     }
-    if (!emummc_storage_read(&emmc_storage, PKG1_OFFSET / NX_EMMC_BLOCKSIZE, PKG1_MAX_SIZE / NX_EMMC_BLOCKSIZE, pkg1)) {
+    if (!emummc_storage_read(&emmc_storage, PKG1_OFFSET / EMMC_BLOCKSIZE, PKG1_MAX_SIZE / EMMC_BLOCKSIZE, pkg1)) {
         DPRINTF("Unable to read pkg1.");
         return NULL;
     }

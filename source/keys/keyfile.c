@@ -5,7 +5,7 @@
 #include <string.h>
 #include <utils/ini.h>
 #include "../tegraexplorer/tconf.h"
-#include <storage/nx_sd.h>
+#include <storage/sd.h>
 #include "../gfx/gfx.h"
 
 #define GetHexFromChar(c) ((c & 0x0F) + (c >= 'A' ? 9 : 0))

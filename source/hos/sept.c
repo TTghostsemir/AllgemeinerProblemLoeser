@@ -27,8 +27,8 @@
 #include <soc/hw_init.h>
 #include <soc/pmc.h>
 #include <soc/t210.h>
-#include "../storage/nx_emmc.h"
-#include <storage/nx_sd.h>
+#include <storage/emmc.h>
+#include <storage/sd.h>
 #include <storage/sdmmc.h>
 #include <utils/btn.h>
 #include <utils/list.h>

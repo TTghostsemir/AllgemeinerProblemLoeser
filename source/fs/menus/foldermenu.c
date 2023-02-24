@@ -14,7 +14,7 @@
 #include "../../script/lexer.h"
 #include "../../script/parser.h"
 #include "../../script/variables.h"
-#include <storage/nx_sd.h>
+#include <storage/sd.h>
 #include "../fscopy.h"
 
 MenuEntry_t FolderMenuEntries[] = {

@@ -6,7 +6,7 @@
 #include <mem/heap.h>
 #include "lexer.h"
 
-#include <storage/nx_sd.h>
+#include <storage/sd.h>
 #include "../fs/fsutils.h"
 #include "../gfx/gfxutils.h"
 #include "../hid/hid.h"

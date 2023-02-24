@@ -6,13 +6,13 @@
 #include "mountmanager.h"
 #include <utils/list.h>
 #include <string.h>
-#include "nx_emmc.h"
+#include <storage/emmc.h>
 #include <mem/heap.h>
 #include "../fs/menus/explorer.h"
 #include "../err.h"
 #include "../tegraexplorer/tconf.h"
 #include "emmcfile.h"
-#include <storage/nx_sd.h>
+#include <storage/sd.h>
 #include "../fs/fsutils.h"
 #include "../utils/utils.h"
 

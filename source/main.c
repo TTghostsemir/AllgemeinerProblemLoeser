@@ -32,8 +32,8 @@
 #include <soc/bpmp.h>
 #include <soc/hw_init.h>
 #include "storage/emummc.h"
-#include "storage/nx_emmc.h"
-#include <storage/nx_sd.h>
+#include "storage/emmc.h"
+#include <storage/sd.h>
 #include <storage/sdmmc.h>
 #include <utils/btn.h>
 #include <utils/dirlist.h>

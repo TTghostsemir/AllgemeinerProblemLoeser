@@ -495,6 +495,17 @@ void gfx_putc_small(char c){
 
 #define hexDumpLen 0x20
 
+static void _gfx_cputs(u32 color, const char *s)
+{
+	gfx_con.fgcol = color;
+	gfx_puts(s);
+	gfx_putc('\n');
+	gfx_con.fgcol = TXT_CLR_DEFAULT;
+}
+
+void gfx_wputs(const char *s) { _gfx_cputs(TXT_CLR_WARNING, s); }
+void gfx_eputs(const char *s) { _gfx_cputs(TXT_CLR_ERROR,   s); }
+
 void gfx_hexdump(u32 base, const u8 *buf, u32 len)
 {
 	if (gfx_con.mute)

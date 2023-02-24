@@ -24,7 +24,7 @@
 #include <libs/fatfs/ff.h>
 #include <mem/heap.h>
 #include "../storage/emummc.h"
-#include <storage/nx_sd.h>
+#include <storage/sd.h>
 
 #include <gfx_utils.h>
 #define DPRINTF(...)

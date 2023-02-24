@@ -3,16 +3,16 @@
 #include "emummc.h"
 #include "mountmanager.h"
 #include <libs/fatfs/ff.h>
-#include "nx_emmc.h"
+#include <storage/emmc.h>
 #include <mem/heap.h>
 #include "../err.h"
 #include "../tegraexplorer/tconf.h"
 #include "../gfx/gfxutils.h"
 #include "../hid/hid.h"
-#include <storage/nx_sd.h>
+#include <storage/sd.h>
 #include <string.h>
 #include "../fs/fsutils.h"
-#include "nx_emmc_bis.h"
+#include <storage/nx_emmc_bis.h>
 
 // Uses default storage in nx_emmc.c
 // Expects the correct mmc & partition to be set
@@ -41,7 +41,7 @@ ErrCode_t EmmcDumpToFile(const char *path, u32 lba_start, u32 lba_end, u8 force,
     gfx_con_getpos(&x, &y);
 
     while (totalSectors > 0){
-        u32 num = MIN(totalSectors, TConf.FSBuffSize / NX_EMMC_BLOCKSIZE);
+        u32 num = MIN(totalSectors, TConf.FSBuffSize / EMMC_BLOCKSIZE);
         
         int readRes = 0;
         if (crypt)
@@ -54,7 +54,7 @@ ErrCode_t EmmcDumpToFile(const char *path, u32 lba_start, u32 lba_end, u8 force,
             break;
         }
 
-        if ((res = f_write(&fp, buff, num * NX_EMMC_BLOCKSIZE, NULL))){
+        if ((res = f_write(&fp, buff, num * EMMC_BLOCKSIZE, NULL))){
             err = newErrCode(res);
             break;
         }
@@ -82,7 +82,7 @@ ErrCode_t EmmcRestoreFromFile(const char *path, u32 lba_start, u32 lba_end, u8 f
         return newErrCode(res);
 
     u64 totalSizeSrc = f_size(&fp);
-    u32 totalSectorsSrc = totalSizeSrc / NX_EMMC_BLOCKSIZE;
+    u32 totalSectorsSrc = totalSizeSrc / EMMC_BLOCKSIZE;
 
     if (totalSectorsSrc > totalSectorsDest) // We don't close the file here, oh well
         return newErrCode(TE_ERR_FILE_TOO_BIG_FOR_DEST);
@@ -100,9 +100,9 @@ ErrCode_t EmmcRestoreFromFile(const char *path, u32 lba_start, u32 lba_end, u8 f
     gfx_con_getpos(&x, &y);
 
     while (totalSectorsSrc > 0){
-        u32 num = MIN(totalSectorsSrc, TConf.FSBuffSize / NX_EMMC_BLOCKSIZE);
+        u32 num = MIN(totalSectorsSrc, TConf.FSBuffSize / EMMC_BLOCKSIZE);
 
-        if ((res = f_read(&fp, buff, num * NX_EMMC_BLOCKSIZE, NULL))){
+        if ((res = f_read(&fp, buff, num * EMMC_BLOCKSIZE, NULL))){
             err = newErrCode(res);
             break;
         }
@@ -121,7 +121,7 @@ ErrCode_t EmmcRestoreFromFile(const char *path, u32 lba_start, u32 lba_end, u8 f
         curLba += num;
         totalSectorsSrc -= num;
 
-        u32 percent = ((curLba - lba_start) * 100) / ((totalSizeSrc / NX_EMMC_BLOCKSIZE));
+        u32 percent = ((curLba - lba_start) * 100) / ((totalSizeSrc / EMMC_BLOCKSIZE));
         gfx_printf("[%3d%%]", percent);
         gfx_con_setpos(x, y);
     }
@@ -158,11 +158,11 @@ ErrCode_t DumpOrWriteEmmcPart(const char *path, const char *part, u8 write, u8 f
 
     if (!memcmp(part, "BOOT0", 5)){
         emummc_storage_set_mmc_partition(&emmc_storage, 1);
-        lba_end = (BOOT_PART_SIZE / NX_EMMC_BLOCKSIZE) - 1;
+        lba_end = (BOOT_PART_SIZE / EMMC_BLOCKSIZE) - 1;
     }
     else if (!memcmp(part, "BOOT1", 5)){
         emummc_storage_set_mmc_partition(&emmc_storage, 2);
-        lba_end = (BOOT_PART_SIZE / NX_EMMC_BLOCKSIZE) - 1;
+        lba_end = (BOOT_PART_SIZE / EMMC_BLOCKSIZE) - 1;
     }
     else {
         emummc_storage_set_mmc_partition(&emmc_storage, 0);
@@ -172,7 +172,7 @@ ErrCode_t DumpOrWriteEmmcPart(const char *path, const char *part, u8 write, u8 f
             return newErrCode(TE_ERR_PARTITION_NOT_FOUND);
 
         if (isSystemPartCrypt(system_part) && TConf.keysDumped){
-            nx_emmc_bis_init(system_part);
+            nx_emmc_bis_init(system_part, false, 0);
             crypt = true;
             lba_start = 0;
             lba_end = system_part->lba_end - system_part->lba_start;

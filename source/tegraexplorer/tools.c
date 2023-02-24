@@ -6,9 +6,10 @@
 #include <libs/fatfs/ff.h>
 #include "../keys/keys.h"
 #include "../keys/nca.h"
-#include <storage/nx_sd.h>
+#include <storage/sd.h>
 #include "../fs/fsutils.h"
 #include <utils/util.h>
+#include <display/di.h>
 #include "../storage/mountmanager.h"
 #include "../err.h"
 #include <utils/sprintf.h>
@@ -176,7 +177,7 @@ void FormatSD(){
 	}
 
 	u8 *work = malloc(TConf.FSBuffSize);
-	res = f_fdisk_mod(0, plist, work);
+	res = f_fdisk(0, plist, work);
 
 	if (!res){
 		res = f_mkfs("sd:", FM_FAT32, 32768, work, TConf.FSBuffSize);
@@ -198,12 +199,10 @@ void FormatSD(){
 	hidWait();
 }
 
-extern bool sd_mounted;
-
 void TakeScreenshot(){
     static u32 timer = 0;
 
-    if (!TConf.minervaEnabled || !sd_mounted)
+    if (!TConf.minervaEnabled || !sd_get_card_mounted())
 		return;
 
     if (timer + 3 < get_tmr_s())

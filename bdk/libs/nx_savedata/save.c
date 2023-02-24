@@ -38,7 +38,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <mem/heap.h>
 #include <rtc/max77620-rtc.h>
 #include <sec/se.h>
-#include <storage/nx_sd.h>
+#include <storage/sd.h>
 #include <utils/ini.h>
 #include <utils/sprintf.h>
 

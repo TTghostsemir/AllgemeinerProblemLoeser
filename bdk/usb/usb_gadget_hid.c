@@ -1,7 +1,7 @@
 /*
  * USB Gadget HID driver for Tegra X1
  *
- * Copyright (c) 2019-2020 CTCaer
+ * Copyright (c) 2019-2022 CTCaer
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,8 +23,8 @@
 #include <input/joycon.h>
 #include <input/touch.h>
 #include <soc/hw_init.h>
+#include <soc/timer.h>
 #include <soc/t210.h>
-#include <utils/util.h>
 
 #include <memory_map.h>
 
@@ -159,14 +159,22 @@ static bool _jc_poll(gamepad_report_t *rpt)
 		u16 y_raw = (jc_pad->lstick_y - jc_cal_ctx.cly_max) / 7;
 		if (y_raw > 0x7F)
 			y_raw = 0x7F;
-		rpt->y = 0x7F - y_raw;
+		// Hoag has inverted Y axis.
+		if (!jc_pad->sio_mode)
+			rpt->y = 0x7F - y_raw;
+		else
+			rpt->y = 0x7F + y_raw;
 	}
 	else
 	{
 		u16 y_raw = (jc_cal_ctx.cly_min - jc_pad->lstick_y) / 7;
 		if (y_raw > 0x7F)
 			y_raw = 0x7F;
-		rpt->y = 0x7F + y_raw;
+		// Hoag has inverted Y axis.
+		if (!jc_pad->sio_mode)
+			rpt->y = 0x7F + y_raw;
+		else
+			rpt->y = 0x7F - y_raw;
 	}
 
 	// Calculate right analog stick.
@@ -194,14 +202,22 @@ static bool _jc_poll(gamepad_report_t *rpt)
 		u16 y_raw = (jc_pad->rstick_y - jc_cal_ctx.cry_max) / 7;
 		if (y_raw > 0x7F)
 			y_raw = 0x7F;
-		rpt->rz = 0x7F - y_raw;
+		// Hoag has inverted Y axis.
+		if (!jc_pad->sio_mode)
+			rpt->rz = 0x7F - y_raw;
+		else
+			rpt->rz = 0x7F + y_raw;
 	}
 	else
 	{
 		u16 y_raw = (jc_cal_ctx.cry_min - jc_pad->rstick_y) / 7;
 		if (y_raw > 0x7F)
 			y_raw = 0x7F;
-		rpt->rz = 0x7F + y_raw;
+		// Hoag has inverted Y axis.
+		if (!jc_pad->sio_mode)
+			rpt->rz = 0x7F + y_raw;
+		else
+			rpt->rz = 0x7F - y_raw;
 	}
 
 	// Set D-pad.
@@ -312,7 +328,7 @@ static u8 _hid_transfer_start(usb_ctxt_t *usbs, u32 len)
 	u8 status = usb_ops.usb_device_ep1_in_write((u8 *)USB_EP_BULK_IN_BUF_ADDR, len, NULL, USB_XFER_SYNCED_CMD);
 	if (status == USB_ERROR_XFER_ERROR)
 	{
-		usbs->set_text(usbs->label, "#FFDD00 Error:# EP IN transfer!");
+		usbs->set_text(usbs->label, "#FFDD00 错误：#EP IN传输！");
 		if (usb_ops.usbd_flush_endpoint)
 			usb_ops.usbd_flush_endpoint(USB_EP_BULK_IN);
 	}
@@ -361,7 +377,7 @@ int usb_device_gadget_hid(usb_ctxt_t *usbs)
 
 	if (usbs->type == USB_HID_GAMEPAD)
 	{
-		polling_time = 8000;
+		polling_time = 15000;
 		gadget_type = USB_GADGET_HID_GAMEPAD;
 	}
 	else
@@ -370,7 +386,7 @@ int usb_device_gadget_hid(usb_ctxt_t *usbs)
 		gadget_type = USB_GADGET_HID_TOUCHPAD;
 	}
 
-	usbs->set_text(usbs->label, "#C7EA46 Status:# Started USB");
+	usbs->set_text(usbs->label, "#C7EA46 状态：#开启USB");
 
 	if (usb_ops.usb_device_init())
 	{
@@ -378,18 +394,18 @@ int usb_device_gadget_hid(usb_ctxt_t *usbs)
 		return 1;
 	}
 
-	usbs->set_text(usbs->label, "#C7EA46 Status:# Waiting for connection");
+	usbs->set_text(usbs->label, "#C7EA46 状态：#等待连接");
 
 	// Initialize Control Endpoint.
 	if (usb_ops.usb_device_enumerate(gadget_type))
 		goto error;
 
-	usbs->set_text(usbs->label, "#C7EA46 Status:# Waiting for HID report request");
+	usbs->set_text(usbs->label, "#C7EA46 状态：#等待HID上报请求");
 
 	if (usb_ops.usb_device_class_send_hid_report())
 		goto error;
 
-	usbs->set_text(usbs->label, "#C7EA46 Status:# Started HID emulation");
+	usbs->set_text(usbs->label, "#C7EA46 状态：#开始HID模拟");
 
 	u32 timer_sys = get_tmr_ms() + 5000;
 	while (true)
@@ -427,11 +443,11 @@ int usb_device_gadget_hid(usb_ctxt_t *usbs)
 		}
 	}
 
-	usbs->set_text(usbs->label, "#C7EA46 Status:# HID ended");
+	usbs->set_text(usbs->label, "#C7EA46 状态：#HID结束");
 	goto exit;
 
 error:
-	usbs->set_text(usbs->label, "#FFDD00 Error:# Timed out or canceled");
+	usbs->set_text(usbs->label, "#FFDD00 错误：#超时或取消");
 	res = 1;
 
 exit:
