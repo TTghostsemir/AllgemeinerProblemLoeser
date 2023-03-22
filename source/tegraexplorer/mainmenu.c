@@ -52,28 +52,28 @@ enum {
 };
 
 MenuEntry_t mainMenuEntries[] = {
-    [MainExplore] = {.optionUnion = COLORTORGB(COLOR_WHITE) | SKIPBIT, .name = "-- Bootfixes --"},
+    [MainExplore] = {.optionUnion = COLORTORGB(COLOR_WHITE) | SKIPBIT, .name = "-- Behebe Start Probleme --"},
     [DeleteBootFlags] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Disable automatic sysmodule startup"},
-    [DeleteThemes] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Delete installed themes"},
-    [FixClingWrap] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Fix ClingWrap"},
-    [FixAIOUpdaterBoot] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Fix Switch-AiO-Updater update"},
-    [FixArchiveBitA] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Fix archive bit (all folders except nintendo)"},
-    [FixArchiveBitN] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Fix archive bit (nintendo folder)"},
+    [DeleteThemes] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Loesche Installierte themes"},
+    [FixClingWrap] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Behebe Problem mit SigPatches"},
+    [FixAIOUpdaterBoot] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Behebe fehler vom Switch-AiO-Updater update"},
+    [FixArchiveBitA] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Behebe archive bit (alle Ordner ausser nintendo)"},
+    [FixArchiveBitN] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Behebe archive bit (nintendo Ordner)"},
     // [FixAll] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Try everything"},
 
-    [MainConvenience] = {.optionUnion = COLORTORGB(COLOR_WHITE) | SKIPBIT, .name = "\n-- Convenience --"},
-    [FixMacSpecialFolders] = {.optionUnion = COLORTORGB(COLOR_ORANGE), .name = "Remove special folders created by Mac"},
+    [MainConvenience] = {.optionUnion = COLORTORGB(COLOR_WHITE) | SKIPBIT, .name = "\n-- Bequemlichkeit --"},
+    [FixMacSpecialFolders] = {.optionUnion = COLORTORGB(COLOR_ORANGE), .name = "Entferne special Ordner die von macOS erstellt werden"},
 
-    [MainOther] = {.optionUnion = COLORTORGB(COLOR_WHITE) | SKIPBIT, .name = "\n-- Other --"},
-    [MainViewStillNoBootInfo] = {.optionUnion = COLORTORGB(COLOR_YELLOW), .name = "My switch still does not boot"},
-    [MainViewCredits] = {.optionUnion = COLORTORGB(COLOR_YELLOW), .name = "Credits"},
+    [MainOther] = {.optionUnion = COLORTORGB(COLOR_WHITE) | SKIPBIT, .name = "\n-- Andere --"},
+    [MainViewStillNoBootInfo] = {.optionUnion = COLORTORGB(COLOR_YELLOW), .name = "Meine Switch Startet nicht mehr"},
+    [MainViewCredits] = {.optionUnion = COLORTORGB(COLOR_YELLOW), .name = "Ueber"},
 
-    [MainExit] = {.optionUnion = COLORTORGB(COLOR_WHITE) | SKIPBIT, .name = "\n-- Exit --"},
-    [MainPowerOff] = {.optionUnion = COLORTORGB(COLOR_VIOLET), .name = "Power off"},
-    [MainRebootRCM] = {.optionUnion = COLORTORGB(COLOR_VIOLET), .name = "Reboot to RCM"},
-    // [MainRebootNormal] = {.optionUnion = COLORTORGB(COLOR_VIOLET), .name = "Reboot normally"},
-    [MainRebootHekate] = {.optionUnion = COLORTORGB(COLOR_VIOLET), .name = "Reboot to bootloader/update.bin"},
-    [MainRebootAMS] = {.optionUnion = COLORTORGB(COLOR_VIOLET), .name = "Reboot to atmosphere/reboot_payload.bin"}
+    [MainExit] = {.optionUnion = COLORTORGB(COLOR_WHITE) | SKIPBIT, .name = "\n-- Beenden --"},
+    [MainPowerOff] = {.optionUnion = COLORTORGB(COLOR_VIOLET), .name = "Ausschalten"},
+    [MainRebootRCM] = {.optionUnion = COLORTORGB(COLOR_VIOLET), .name = "Neustart zum RCM Modus"},
+    // [MainRebootNormal] = {.optionUnion = COLORTORGB(COLOR_VIOLET), .name = "Normaler Neustart"},
+    [MainRebootHekate] = {.optionUnion = COLORTORGB(COLOR_VIOLET), .name = "Neustart zu Hekate"},
+    [MainRebootAMS] = {.optionUnion = COLORTORGB(COLOR_VIOLET), .name = "Neustart zu Atmosphere"}
     
     
     // [MainBrowseSd] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Browse SD"},
