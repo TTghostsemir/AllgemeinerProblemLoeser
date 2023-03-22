@@ -223,7 +223,7 @@ int _fix_attributes(char *path, u32 *total, u32 hos_folder, u32 check_first_run)
 
 void m_entry_fixArchiveBit(u32 type){
     gfx_clearscreen();
-    gfx_printf("\n\n-- Fix Archive Bits\n\n");
+    gfx_printf("\n\n-- Behebe Archive Bits\n\n");
 
     char path[256];
 	char label[16];
@@ -244,11 +244,11 @@ void m_entry_fixArchiveBit(u32 type){
 			break;
 		}
 
-		gfx_printf("Traversing all %s files!\nThis may take some time...\n\n", label);
+		gfx_printf("Traversing all %s files!\nDies kann einige Zeit beanspruchen...\n\n", label);
 		_fix_attributes(path, &total, type, type);
-		gfx_printf("%kTotal archive bits cleared: %d!%k", 0xFF96FF00, total, 0xFFCCCCCC);
+		gfx_printf("%kAnzahl der Behobenden Archiv bits: %d!%k", 0xFF96FF00, total, 0xFFCCCCCC);
 		
-        gfx_printf("\n\n Done, press a key to proceed.");
+        gfx_printf("\n\n Fertig, Druecke eine Taste um Fortzufahren");
         hidWait();
 	}
 }
@@ -256,7 +256,7 @@ void m_entry_fixArchiveBit(u32 type){
 
 void m_entry_fixAIOUpdate(){
     gfx_clearscreen();
-    gfx_printf("\n\n-- Fix broken Switch-AiO-Updater update.\n\n");
+    gfx_printf("\n\n-- Behebe Kaputtes Switch-AiO-Updater update.\n\n");
 
     char *aio_fs_path = CpyStr("sd:/atmosphere/fusee-secondary.bin.aio");
     char *aio_p_path = CpyStr("sd:/sept/payload.bin.aio");
@@ -267,7 +267,7 @@ void m_entry_fixAIOUpdate(){
     char *o_strt_path = CpyStr("sd:/atmosphere/stratosphere.romfs");
 
     if (FileExists(aio_fs_path)) {
-        gfx_printf("Detected aio updated fusee-secondary file -> replacing original\n\n");
+        gfx_printf("Erkannte aio aktualisierte fusee-secondary Datei -> ersetzt das Original\n\n");
         if (FileExists(o_fs_path)) {
             _DeleteFileSimple(o_fs_path);
         }
@@ -277,7 +277,7 @@ void m_entry_fixAIOUpdate(){
     free(o_fs_path);
 
     if (FileExists(aio_p_path)) {
-        gfx_printf("Detected aio updated paload file -> replacing original\n\n");
+        gfx_printf("Erkannte aio aktualisierte Payload-Datei -> ersetzt das Original\n\n");
         if (FileExists(o_p_path)) {
             _DeleteFileSimple(o_p_path);
         }
@@ -287,7 +287,7 @@ void m_entry_fixAIOUpdate(){
     free(o_p_path);
 
     if (FileExists(aio_strt_path)) {
-        gfx_printf("Detected aio updated stratosphere file -> replacing original\n\n");
+        gfx_printf("Erkannte aio aktualisierte Stratosphere datei -> ersetzt das Original\n\n");
         if (FileExists(o_strt_path)) {
             _DeleteFileSimple(o_strt_path);
         }
@@ -297,13 +297,13 @@ void m_entry_fixAIOUpdate(){
     free(o_strt_path);
 
 
-    gfx_printf("\n\n Done, press a key to proceed.");
+    gfx_printf("\n\n Fertig, druecke eine Taste um Fortzufahren.");
     hidWait();
 }
 
 void m_entry_fixClingWrap(){
     gfx_clearscreen();
-    gfx_printf("\n\n-- Fixing ClingWrap.\n\n");
+    gfx_printf("\n\n-- Behebe SigPatches.\n\n");
     char *bpath = CpyStr("sd:/_b0otloader");
     char *bopath = CpyStr("sd:/bootloader");
     char *kpath = CpyStr("sd:/atmosphere/_k1ps");
@@ -320,7 +320,7 @@ void m_entry_fixClingWrap(){
         if (res){
             DrawError(newErrCode(res));
         }
-        gfx_printf("-- Fixed Bootloader\n");
+        gfx_printf("-- Bootloader Behoben!\n");
     }
 
     if (FileExists(kpath)) {
@@ -331,7 +331,7 @@ void m_entry_fixClingWrap(){
         if (res){
             DrawError(newErrCode(res));
         }
-        gfx_printf("-- Fixed kips\n");
+        gfx_printf("-- kips Behoben!\n");
     }
 
     if (FileExists(ppath)) {
@@ -339,7 +339,7 @@ void m_entry_fixClingWrap(){
             _DeleteFileSimple(popath);
         }
         _RenameFileSimple(ppath,popath);
-        gfx_printf("-- Fixed patches.ini\n");
+        gfx_printf("-- patches.ini Behoben!\n");
     }
 
     free(bpath);
@@ -349,14 +349,14 @@ void m_entry_fixClingWrap(){
     free(ppath);
     free(popath);
 
-    gfx_printf("\n\n Done, press a key to proceed.");
+    gfx_printf("\n\n Fertig, druecke eine Taste um Fortzufahren");
     hidWait();
 }
 
 void _deleteTheme(char* basePath, char* folderId){
     char *path = CombinePaths(basePath, folderId);
     if (FileExists(path)) {
-        gfx_printf("-- Theme found: %s\n", path);
+        gfx_printf("-- Gefundene Themes: %s\n", path);
         FolderDelete(path);
     }
     free(path);
@@ -364,18 +364,18 @@ void _deleteTheme(char* basePath, char* folderId){
 
 void m_entry_deleteInstalledThemes(){
     gfx_clearscreen();
-    gfx_printf("\n\n-- Deleting installed themes.\n\n");
+    gfx_printf("\n\n-- Loesche Installierte Themes.\n\n");
     _deleteTheme("sd:/atmosphere/contents", "0100000000001000");
     _deleteTheme("sd:/atmosphere/contents", "0100000000001007");
     _deleteTheme("sd:/atmosphere/contents", "0100000000001013");
 
-    gfx_printf("\n\n Done, press a key to proceed.");
+    gfx_printf("\n\n Fertig, druecke eine Taste um Fortzufahren");
     hidWait();
 }
 
 void m_entry_deleteBootFlags(){
     gfx_clearscreen();
-    gfx_printf("\n\n-- Disabling automatic sysmodule startup.\n\n");
+    gfx_printf("\n\n-- Deaktieviere das Automatische Starten der sysmodule\n\n");
     char *storedPath = CpyStr("sd:/atmosphere/contents");
     int readRes = 0;
     Vector_t fileVec = ReadFolder(storedPath, &readRes);
@@ -391,13 +391,13 @@ void m_entry_deleteBootFlags(){
             flagPath = CombinePaths(flagPath, suf);
 
             if (FileExists(flagPath)) {
-                gfx_printf("Deleting: %s\n", flagPath);
+                gfx_printf("Loesche: %s\n", flagPath);
                 _DeleteFileSimple(flagPath);
             }
             free(flagPath);
         }
     }
-    gfx_printf("\n\n Done, press a key to proceed.");
+    gfx_printf("\n\n Fertig, druecke eine Taste um Fortzufahren");
     hidWait();
 }
 
@@ -405,9 +405,9 @@ void m_entry_deleteBootFlags(){
 
 void m_entry_fixMacSpecialFolders(){
     gfx_clearscreen();
-    gfx_printf("\n\n-- Fix mac folders (this can take some time, please wait.)\n\n");
+    gfx_printf("\n\n-- Mac-Ordner reparieren (dies kann einige Zeit in Anspruch nehmen, bitte warten.)\n\n");
     listdir("/", 0);
-    gfx_printf("\n\rDone, press a key to proceed.");
+    gfx_printf("\n\rFertig, druecke eine Taste um Fortzufahren");
     hidWait();
     
     // browse path
@@ -419,24 +419,24 @@ void m_entry_fixMacSpecialFolders(){
 
 void m_entry_stillNoBootInfo(){
     gfx_clearscreen();
-    gfx_printf("\n\n-- My switch still does not boot.\n\n");
+    gfx_printf("\n\n-- Meine Switch Startet nicht mehr.\n\n");
 
-    gfx_printf("%kDo you have a gamecard inserted?\n", COLOR_WHITE);
-    gfx_printf("Try taking it out and reboot.\n\n");
+    gfx_printf("%kHast du eine Cardrige in der Switch?\n", COLOR_WHITE);
+    gfx_printf("Nimm das Spiel raus und Versuche die Switch zu Starten.\n\n");
 
-    gfx_printf("%kDid you recently update Atmosphere/DeepSea?\n", COLOR_WHITE);
-    gfx_printf("Insert your sdcard into a computer, delete 'atmosphere', 'bootloader' & 'sept', download your preffered CFW and put the files back on your switch.\n\n");
+    gfx_printf("%kHaben Sie kürzlich Atmosphere/SwitchBros aktualisiert?\n", COLOR_WHITE);
+    gfx_printf("Legen Sie Ihre SD-Karte in einen Computer ein, löschen Sie 'atmosphere', 'bootloader' und 'sept', laden Sie Ihre bevorzugtes CFW Paket herunter und legen Sie die Dateien wieder auf Ihre Switch. Wir bieten euch auch gerne Hilfe auf unseren SwitchBros. Discord Server an. https://discord.gg/switchbros\n\n");
 
-    gfx_printf("%kDid you just buy a new SD-card?\n", COLOR_WHITE);
-    gfx_printf("Make sure its not a fake card.\n\n");
+    gfx_printf("%kHaben Sie gerade eine neue SD-Karte gekauft?\n", COLOR_WHITE);
+    gfx_printf("Stell sicher das es keine Fake SD karte ist. \n\n");
 
-    gfx_printf("\n\n Done, press a key to proceed.");
+    gfx_printf("\n\n Fertig, druecke eine Taste um Fortzufahren");
     hidWait();
 }
 
 void m_entry_ViewCredits(){
     gfx_clearscreen();
-    gfx_printf("\nCommon Problem Resolver v%d.%d.%d\nBy Team Neptune\n\nBased on TegraExplorer by SuchMemeManySkill,\nLockpick_RCM & Hekate, from shchmue & CTCaer\n\n\n", LP_VER_MJ, LP_VER_MN, LP_VER_BF);
+    gfx_printf("\nCommon Problem Resolver v%d.%d.%d\nvon Team Neptune (uebersetzt von SwitchBros. und OLED Support hinzugefügt)\n\nBasierend auf TegraExplorer von SuchMemeManySkill,\nLockpick_RCM & Hekate, von shchmue & CTCaer\n\n\n", LP_VER_MJ, LP_VER_MN, LP_VER_BF);
     hidWait();
 }
 
