@@ -19,6 +19,7 @@
 #include <string.h>
 #include "../fs/fscopy.h"
 #include "../utils/utils.h"
+#include <soc/timer.h>
 
 void DumpSysFw(){
 	char sysPath[25 + 36 + 3 + 1]; // 24 for "bis:/Contents/registered", 36 for ncaName.nca, 3 for /00, and 1 to make sure :)

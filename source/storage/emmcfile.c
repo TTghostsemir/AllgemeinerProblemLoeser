@@ -167,7 +167,7 @@ ErrCode_t DumpOrWriteEmmcPart(const char *path, const char *part, u8 write, u8 f
     else {
         emummc_storage_set_mmc_partition(&emmc_storage, 0);
 
-        emmc_part_t *system_part = nx_emmc_part_find(GetCurGPT(), part);
+        emmc_part_t *system_part = emmc_part_find(GetCurGPT(), part);
         if (!system_part)
             return newErrCode(TE_ERR_PARTITION_NOT_FOUND);
 
