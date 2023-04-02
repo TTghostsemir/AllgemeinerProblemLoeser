@@ -177,7 +177,7 @@ void FormatSD(){
 	}
 
 	u8 *work = malloc(TConf.FSBuffSize);
-	res = f_fdisk(0, plist, work);
+	res = f_fdisk_mod(0, plist, work);
 
 	if (!res){
 		res = f_mkfs("sd:", FM_FAT32, 32768, work, TConf.FSBuffSize);
