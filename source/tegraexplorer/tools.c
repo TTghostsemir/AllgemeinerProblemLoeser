@@ -120,7 +120,6 @@ void DumpSysFw(){
 }
 
 extern sdmmc_storage_t sd_storage;
-extern bool is_sd_inited;
 
 MenuEntry_t FatAndEmu[] = {
 	{.optionUnion = COLORTORGB(COLOR_ORANGE), .name = "Back to main menu"},
@@ -135,7 +134,7 @@ void FormatSD(){
 	bool emummc = 0;
 	int res;
 
-	if (!is_sd_inited || sd_get_card_removed())
+	if (!sd_get_card_initialized() || sd_get_card_removed())
 		return;
 
 	gfx_printf("\nDo you want to partition for an emummc?\n");

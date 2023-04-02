@@ -50,10 +50,21 @@ static const pkg1_id_t _pkg1_ids[] = {
 	{ NULL } //End.
 };
 
+#define KB_FIRMWARE_VERSION_MAX 11
+
 const pkg1_id_t *pkg1_identify(u8 *pkg1)
 {
 	for (u32 i = 0; _pkg1_ids[i].id; i++)
 		if (!memcmp(pkg1 + 0x10, _pkg1_ids[i].id, 8))
 			return &_pkg1_ids[i];
-	return NULL;
+
+	char build_date[15];
+	memcpy(build_date, (char *)(pkg1 + 0x10), 14);
+	build_date[14] = 0;
+
+	if (*(pkg1 + 0xE) != KB_FIRMWARE_VERSION_MAX + 1) {
+		return NULL;
+	}
+
+	return &_pkg1_ids[ARRAY_SIZE(_pkg1_ids)-1];
 }
