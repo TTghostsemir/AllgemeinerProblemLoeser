@@ -53,7 +53,7 @@ enum {
 
 MenuEntry_t mainMenuEntries[] = {
     [MainExplore] = {.optionUnion = COLORTORGB(COLOR_WHITE) | SKIPBIT, .name = "-- Behebe Start Probleme --"},
-    [DeleteBootFlags] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Disable automatic sysmodule startup"},
+    [DeleteBootFlags] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Deaktiviere das Automatische Starten der System Module"},
     [DeleteThemes] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Loesche Installierte themes"},
     [FixClingWrap] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Behebe Problem mit SigPatches"},
     [FixAIOUpdaterBoot] = {.optionUnion = COLORTORGB(COLOR_GREEN), .name = "Behebe fehler vom Switch-AiO-Updater update"},
