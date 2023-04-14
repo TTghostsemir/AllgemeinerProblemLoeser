@@ -3,6 +3,7 @@
 #include <utils/types.h>
 #include <mem/heap.h>
 #include <utils/util.h>
+#include <soc/timer.h>
 #include "vector.h"
 #include "../gfx/gfxutils.h"
 #include "../gfx/gfx.h"

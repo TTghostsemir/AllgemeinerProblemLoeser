@@ -19,6 +19,7 @@
 #include <string.h>
 #include "../fs/fscopy.h"
 #include "../utils/utils.h"
+#include <soc/timer.h>
 
 void DumpSysFw(){
 	char sysPath[25 + 36 + 3 + 1]; // 24 for "bis:/Contents/registered", 36 for ncaName.nca, 3 for /00, and 1 to make sure :)
@@ -119,7 +120,6 @@ void DumpSysFw(){
 }
 
 extern sdmmc_storage_t sd_storage;
-extern bool is_sd_inited;
 
 MenuEntry_t FatAndEmu[] = {
 	{.optionUnion = COLORTORGB(COLOR_ORANGE), .name = "Back to main menu"},
@@ -134,7 +134,7 @@ void FormatSD(){
 	bool emummc = 0;
 	int res;
 
-	if (!is_sd_inited || sd_get_card_removed())
+	if (!sd_get_card_initialized() || sd_get_card_removed())
 		return;
 
 	gfx_printf("\nDo you want to partition for an emummc?\n");
@@ -177,7 +177,7 @@ void FormatSD(){
 	}
 
 	u8 *work = malloc(TConf.FSBuffSize);
-	res = f_fdisk(0, plist, work);
+	res = f_fdisk_mod(0, plist, work);
 
 	if (!res){
 		res = f_mkfs("sd:", FM_FAT32, 32768, work, TConf.FSBuffSize);

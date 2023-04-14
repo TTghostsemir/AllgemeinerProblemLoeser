@@ -40,7 +40,7 @@ void disconnectMMC(){
     if (TConf.currentMMCConnected != MMC_CONN_None){
         TConf.currentMMCConnected = MMC_CONN_None;
         emummc_storage_end(&emmc_storage);
-        nx_emmc_gpt_free(&curGpt);
+        emmc_gpt_free(&curGpt);
     }
 }
 
@@ -55,7 +55,7 @@ int connectMMC(u8 mmcType){
     if (!res){
         TConf.currentMMCConnected = mmcType;
         emummc_storage_set_mmc_partition(&emmc_storage, 0);
-        nx_emmc_gpt_parse(&curGpt, &emmc_storage);
+        emmc_gpt_parse(&curGpt);
     }
         
     return res; // deal with the errors later lol
@@ -69,7 +69,7 @@ ErrCode_t mountMMCPart(const char *partition){
 
     emummc_storage_set_mmc_partition(&emmc_storage, 0); // why i have to do this twice beats me
         
-    emmc_part_t *system_part = nx_emmc_part_find(&curGpt, partition);
+    emmc_part_t *system_part = emmc_part_find(&curGpt, partition);
     if (!system_part)
         return newErrCode(TE_ERR_PARTITION_NOT_FOUND);
         

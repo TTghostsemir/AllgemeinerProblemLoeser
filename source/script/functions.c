@@ -7,6 +7,7 @@
 #include "lexer.h"
 
 #include <storage/sd.h>
+#include <soc/timer.h>
 #include "../fs/fsutils.h"
 #include "../gfx/gfxutils.h"
 #include "../hid/hid.h"

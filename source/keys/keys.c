@@ -34,6 +34,25 @@
 
 #include <string.h>
 
+#define TSEC_KEY_DATA_OFFSET 0x300
+
+typedef struct _tsec_key_data_t
+{
+    u8 debug_key[0x10];
+    u8 blob0_auth_hash[0x10];
+    u8 blob1_auth_hash[0x10];
+    u8 blob2_auth_hash[0x10];
+    u8 blob2_aes_iv[0x10];
+    u8 hovi_eks_seed[0x10];
+    u8 hovi_common_seed[0x10];
+    u32 blob0_size;
+    u32 blob1_size;
+    u32 blob2_size;
+    u32 blob3_size;
+    u32 blob4_size;
+    u8 reserved[0x7C];
+} tsec_key_data_t;
+
 extern hekate_config h_cfg;
 
 #define DPRINTF(x)
@@ -240,9 +259,9 @@ static ALWAYS_INLINE u8 *_read_pkg1(const pkg1_id_t **pkg1_id) {
     *pkg1_id = pkg1_identify(pkg1 + pk1_offset);
     if (!*pkg1_id) {
         DPRINTF("Unknown pkg1 version.\n Make sure you have the latest Lockpick_RCM.\n If a new firmware version just came out,\n Lockpick_RCM must be updated.\n Check Github for new release.");
-        //gfx_hexdump(0, pkg1, 0x20);
+        //gfx_hexdump(0, pkg1 + pk1_offset, 0x20);
         char pkg1txt[16] = {0};
-        memcpy(pkg1txt, pkg1 + pk1_offset +  0x10, 15);
+        memcpy(pkg1txt, pkg1 + pk1_offset + 0x10, 14);
         gfx_printf("Unknown pkg1 version\nMake sure you have the latest version of TegraExplorer\n\nPKG1: '%s'\n", pkg1txt);
         return NULL;
     }
@@ -253,9 +272,6 @@ static ALWAYS_INLINE u8 *_read_pkg1(const pkg1_id_t **pkg1_id) {
 key_derivation_ctx_t __attribute__((aligned(4))) dumpedKeys = {0};
 
 int DumpKeys(){
-    if (h_cfg.t210b01) // i'm not even attempting to dump on mariko
-        return 2;
-
     const pkg1_id_t *pkg1_id;
     u8 *pkg1 = _read_pkg1(&pkg1_id);
     if (!pkg1) {
@@ -264,6 +280,11 @@ int DumpKeys(){
 
     TConf.pkg1ID = pkg1_id->id;
     TConf.pkg1ver = (u8)pkg1_id->kb;
+
+    if (h_cfg.t210b01) {// i'm not even attempting to dump on mariko
+        free(pkg1);
+        return 2;
+    }
 
     bool res = true;
 

@@ -20,13 +20,11 @@
 
 #include <utils/types.h>
 
-#define TSEC_KEY_DATA_OFFSET 0x300
-
 enum tsec_fw_type
 {
 	// Retail Hovi Keygen.
 	TSEC_FW_TYPE_OLD = 0, // 1.0.0 - 6.1.0.
-	TSEC_FW_TYPE_EMU = 1, // 6.2.0 emulated enviroment.
+	TSEC_FW_TYPE_EMU = 1, // 6.2.0 emulated environment.
 	TSEC_FW_TYPE_NEW = 2, // 7.0.0+.
 };
 
@@ -39,23 +37,6 @@ typedef struct _tsec_ctxt_t
 	u32 pkg11_off;
 	u32 secmon_base;
 } tsec_ctxt_t;
-
-typedef struct _tsec_key_data_t
-{
-    u8 debug_key[0x10];
-    u8 blob0_auth_hash[0x10];
-    u8 blob1_auth_hash[0x10];
-    u8 blob2_auth_hash[0x10];
-    u8 blob2_aes_iv[0x10];
-    u8 hovi_eks_seed[0x10];
-    u8 hovi_common_seed[0x10];
-    u32 blob0_size;
-    u32 blob1_size;
-    u32 blob2_size;
-    u32 blob3_size;
-    u32 blob4_size;
-    u8 reserved[0x7C];
-} tsec_key_data_t;
 
 int tsec_query(void *tsec_keys, tsec_ctxt_t *tsec_ctxt);
 
